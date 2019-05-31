@@ -319,6 +319,11 @@ class TableData:
             self.table[rid].append('') # append empty cells for all rows
         return len(self.table[0])-1 # len starts counting at 1, but I want 0
 
+    def clean_whitespace (self,cname):
+        cid=self.cindex(cname)
+        for rid in range(1, td.nrows()):
+            td.table[rid][cid]=td.table[rid][cid].replace('\r\n', ' ').replace('  ', ' ')
+
 ##
 ##  MORE COMPLEX MANIPULATION
 ##
@@ -368,6 +373,17 @@ class TableData:
         '''
         c=self.cindex(cnameOld)
         self.table[0][c]=cnameNew    
+
+    def default_per_col (cname, default_value):
+        '''
+        Default Value: if cell is empty replace with default value
+            self.default_per_col ('status', 'filled')
+        '''
+        cid=td.cindex(cname)
+        for rid in range(1, td.nrows()):
+            if not td.cell (cid,rid):
+                self.table[rid][cid]=default_value
+            
 ##
 ## Transformations that are not properly abstracted --> callbacks
 ##
@@ -403,6 +419,13 @@ class TableData:
             #print ('DD:'+str(rid)+':'+str(eNotiz)+text)
             td.table[rid][eNotiz]=text
 
+    #variation over default
+    def rewrite_credits(self):
+        cid=td.cindex('Credits')
+        vi=td.cindex('VerwaltendeInstitution')
+        for rid in range(1, td.nrows()):
+            if not td.cell (cid,rid):
+                self.table[rid][cid]=self.table[rid][vi]
 
 ###
 ### converting to outside world
@@ -506,6 +529,12 @@ class TableData:
 if __name__ == '__main__':
     td=TableData.load_table ('data/WAF55 Gestalter XSL 20190529.xls', 'v')
     td.erwerbNotizAusgabe()
-  
+    td.delCol('ErwerbDatum')
+    td.delCol('Erwerbungsart')
+    td.clean_whitespace ('OnlineBeschreibung')
+    td.delCol('IdentNrSort')
+    td.rewrite_credits()
+    
+    td.write('data.xml')
     td.write('data.csv')
 
