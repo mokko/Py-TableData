@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<tdx>
+  <row>
+    <ColA>eins</ColA>
+    <ColB>zwei</ColB>
+  </row>
+  <row>
+    <ColA>drei</ColA>
+    <ColB>vier</ColB>
+  </row>
+</tdx>

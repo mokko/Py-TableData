@@ -256,6 +256,11 @@ class TableData:
 
 
     def show (self):
+        '''
+        print representation of table
+        
+        Really print? Why not.
+        '''
         for row in self.table:
                 print (row)
                 
@@ -266,7 +271,9 @@ class TableData:
 
     def delRow (self, r):
         '''
-        Drop a row by row no (which begins at 0)
+        Drop a row by number.
+        
+        Need to remake the index to cover the hole.
         ''' 
         #r always means rid
         self.table.pop(r)
@@ -281,7 +288,7 @@ class TableData:
         
         c=self.cindex (cname)    
         for r in range(0, self.nrows()):
-            self.table[r].pop[c]
+            self.table[r].pop(c)
                     
     def delCellAIfColBEq (self,cnameA, cnameB, needle):
         '''
@@ -469,3 +476,10 @@ class TableData:
         with f as outfile:
             json.dump(self.table, outfile, default=str)
         self.verbose ('json written to %s' % out)
+        
+        
+if __name__ == '__main__':       
+        
+    td=TableData.load_table ('test/data.xls', 'v')
+    td.delCol('ColA')
+    td.show()
