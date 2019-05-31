@@ -4,4 +4,5 @@
 .settings/*
 __pycache__/*
 data/HUFO-*
+data/WAF*
 test/__pycache*
