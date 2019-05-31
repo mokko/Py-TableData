@@ -48,4 +48,10 @@ def test_load_json():
     assert td.ncols() == 2
     assert td.search ('ein') == [(0,1)]
 
+def test_cell():
+    td=TableData.load_table ('test/data.xls')
+    assert td.cell(1,0) == 'ColB'
+    assert td.cell(0,1) == 'eins'
+    assert td.cell(1,1) == 'zwei'
 
+    

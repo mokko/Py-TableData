@@ -7,29 +7,28 @@ information on a round trip between those formats identical.
 
 TableData also allows for simple transformations, like dropping a column.
 
-Data is stored in memory (in a two dimensional list of lists), so there are size limitations. The max. size 
-depends on available memory (ram). 
-
-I will not abstract this thing too far. I write it for my current Excel version and the csv flavor that I
-need (e.g. csv is escaped only for values that contain commas). I don't need multiple Excel sheets, 
-formatting in Excel, lots of types in Excel.
 
 CONVENTIONS
 *cid is column no or column id
 *rid is row no or row id
-*cell is represented by cid|rid, as two integers or (not sure yet) a tuple or a list 
+*cell refers the content of a cell, a cell is represented by cid|rid, as two integers or (not sure yet) a tuple or a list 
 *cname is the column name (in row 0)
-
 
 NOTE
 * (x|y) not rows x cols 
-* Currently internal cells do have a type
-* cid begins with 0, so first cell is 0|0, but ncols and nrows start at 1   
-* nrows and ncols count in Python fashion, beginning with 0
+* Currently internal cells do have a type, which may be flattened to str if output is type agnostic.
+* cid and rid begins with 0, so first cell is 0|0, but ncols and nrows start at 1. Strangely enough, sometimes that is convenient.
 * interface prefers cname over cid
+
+LIMITATIONS
+Data is stored in memory (in a two dimensional list of lists), so max. size depends on available memory (ram). 
 
 WHAT NOT TO DO
 I will NOT allow conversion INTO Excel xsl format, only reading from it. 
+
+I will not abstract this thing too far. I write it for my current Excel version and the csv flavor that I
+need (e.g. csv is escaped only for values that contain commas). I don't need multiple Excel sheets, 
+formatting in Excel, lots of types in Excel.
 
 UNICODE
 I am going for UTF-8 encoding, but not sure I have it everywhere yet. xlrd is internally in UTF16LE, I believe.
@@ -47,7 +46,6 @@ XML Format made by TableData is
 </tdx>
 
 The first row will have all columns, even empty ones. The other rows usually omit empty elements with empty values.
-
 '''
 
 class TableData:
@@ -192,7 +190,7 @@ class TableData:
         self.table = json.loads(json_data)
         
 ##
-## read table data, but manipulations
+## read table data, but NO manipulations
 ##
     def ncols(self):
         '''
@@ -209,13 +207,20 @@ class TableData:
     def cell (self, col,row):
         '''
         Return a cell for col,row.
-            td.cell(col,row) # returns [0,1]
+            td.cell(col,row)
 
         Throws exception if col or row are not integer or out of range.
+        What happens on empty cell?
         
-        I stick to x X y format, although (row X col) could also make sense
+        I stick to x|y format, although row|col might be more pythonic.
+        
+        Empty cell is '' not None.
         '''
-        return self.table[row][col]       
+        try:
+            return self.table[row][col]
+        except:
+            self.verbose ('%i|%i doesnt exist' % (col, row))
+            exit (1)
 
     def cindex (self,needle):
         '''
@@ -224,6 +229,14 @@ class TableData:
         Throws 'not in list' if 'needle' is not a column name (cname).
         '''
         return self.table[0].index(needle)
+
+    def colExists (self, cname):
+        try:
+            self.table[0].index(cname)
+            return True
+        except:
+            return False
+
 
     def search (self, needle): 
         '''
@@ -265,9 +278,10 @@ class TableData:
                 print (row)
                 
         print ('Table size is %i x %i (cols x rows)' % (self.ncols(), self.nrows()))            
+
 ##
-## Transformations 1 (change table data)
-## properly abstracted
+## SIMPLE UNCONDITIONAL TRANSFORMATIONS 
+## 
 
     def delRow (self, r):
         '''
@@ -289,7 +303,27 @@ class TableData:
         c=self.cindex (cname)    
         for r in range(0, self.nrows()):
             self.table[r].pop(c)
-                    
+
+
+    def addCol (self,name):
+        '''
+        Add a new column called name at the end of the row. 
+        Cells with be empty.
+
+        Returns the cid of the new column, same as cindex(cname).
+        '''
+        #update 
+        self.table[0].append(name) 
+        self._uniqueColumns()
+        for rid in range(1, self.nrows()):
+            self.table[rid].append('') # append empty cells for all rows
+        return len(self.table[0])-1 # len starts counting at 1, but I want 0
+
+##
+##  MORE COMPLEX MANIPULATION
+##
+
+
     def delCellAIfColBEq (self,cnameA, cnameB, needle):
         '''
         empty cell in column cnameA if value in column cnameB equals needle in every row
@@ -298,10 +332,10 @@ class TableData:
         '''
         colA=self.cindex(cnameA)
         colB=self.cindex(cnameB) 
-        for r in range(1, self.nrows()):
-            if self.table[r][colB] == needle:
+        for rid in range(1, self.nrows()):
+            if self.table[rid][colB] == needle:
                 self.verbose ('delCellAifColBEq A:%s, B:%s, needle %s' % (cnameA, cnameB, needle))
-                selt.table[r][colA]=''
+                selt.table[rid][colA]=''
 
     def delCellAIfColBContains (self,col_a, col_b, needle): pass
 
@@ -328,18 +362,6 @@ class TableData:
         
            
     def delRowIfColEq (self,col, needle): pass
-
-    
-    def addCol (self,name):
-       '''
-       Add a new column called name at the end of the row. 
-       Cells with be empty.
-       
-       Untested
-       '''
-       #update 
-       self.table[0].append(name) 
-
     def renameCol (self, cnameOld, cnameNew):
         '''
         renames column cnameOld into cnameNew
@@ -349,36 +371,39 @@ class TableData:
 ##
 ## Transformations that are not properly abstracted --> callbacks
 ##
-    def RewriteErwerbNotiz (self):
-        '''
-        Practice run for a ErnerbNotiz@Ausgabe produced by me.
 
-        Untested
-        '''
-        for r in range(1, self.nrows()):
-            #Ich definiere mal eine Form
-            #im Augenblick kein Ver�u�erer, nur Datum/Jahr und EArt
-            #Erworben durch %Erwerbsart %Erwerbsdatum  
-            edatum=self.cname('Erwerbsdatum') 
-            eart=self.cname('Erwerbsart') 
-            enotiz=self.cname('Erwerbnotiz')
-            equali==self.cname('ErwerbQualifikator')
-
-            edatum=self.table[r][edatum]
-            eart=self.table[r][eart]
-            enotiz=self.table[r][enotiz]
-            equali=self.table[r][equali]
-
-            #Do nothing if equali=='Ausgabe'
-            if equali != 'Ausgabe':
-                enotiz="Erworben  %edatum durch %eart"
-                enotiz="Erworben am %edatum durch %eart"
+    def erwerbNotizAusgabe (self):
+        if not td.colExists('ErwerbNotizAusgabe'):
+            eNotiz=td.addCol ('ErwerbNotizAusgabe')
             
-        #whole columns could be deleted afterwards
-        #but not as part of this rule
-        #self.delCol(Erwerbsdatum)
-        #self.delCol(Erwerbsart)
+        inst=td.cindex('VerwaltendeInstitution')
+        eDatum=td.cindex('ErwerbDatum') # exception if col doesnt exist, but can be empty
+        eArt=td.cindex('Erwerbungsart')
+        
+        for rid in range(1, td.nrows()):
+            Inst=td.cell (inst,rid)
+            EDatum=td.cell(eDatum, rid)
+            EArt=td.cell(eArt, rid)
+            #print ('EE:'+Inst+EDatum+EArt)
+            #mapping data to more sensible format
+            if EArt == 'Unbekannt':
+                EArt='unbekannte Erwerbungsart'
                 
+            #Writing German based on available cells
+            if len(EDatum) > 4:
+                EDatum='am %s' % str(EDatum)
+            if Inst and EDatum and EArt:
+                text=('Das %s bzw. eine Vorgängerinstitution erwarb das Objekt %s durch %s.' % (Inst,EDatum,EArt))
+            elif Inst and EDatum:
+                text=('Das %s bzw. eine Vorgängerinstitution erwarb das Objekt %s.' % (Inst,EDatum))
+            elif Inst and EArt:
+                text=('Das %s bzw. eine Vorgängerinstitution erwarb das Objekt durch %s.' % (Inst,EArt))
+            else:
+                text=''
+            #print ('DD:'+str(rid)+':'+str(eNotiz)+text)
+            td.table[rid][eNotiz]=text
+
+
 ###
 ### converting to outside world
 ###
@@ -446,7 +471,7 @@ class TableData:
                 if level and (not elem.tail or not elem.tail.strip()):
                     elem.tail = i
         
-        #don't need cnames here, so start at 1, but then write columns in first row 
+        #don't need cnames here, so start at 1, but then write all columns in first row 
         for r in range(1, self.nrows()):  
             doc = ET.SubElement(root, "row")
             for c in range(0, self.ncols()):      
@@ -478,8 +503,9 @@ class TableData:
         self.verbose ('json written to %s' % out)
         
         
-if __name__ == '__main__':       
-        
-    td=TableData.load_table ('test/data.xls', 'v')
-    td.delCol('ColA')
-    td.show()
+if __name__ == '__main__':
+    td=TableData.load_table ('data/WAF55 Gestalter XSL 20190529.xls', 'v')
+    td.erwerbNotizAusgabe()
+  
+    td.write('data.csv')
+
