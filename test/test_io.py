@@ -54,4 +54,11 @@ def test_cell():
     assert td.cell(0,1) == 'eins'
     assert td.cell(1,1) == 'zwei'
 
+def test_nrows():
+    td=TableData.load_table ('test/data.xls')
+    nrowsXLS=td.nrows()
+    td=TableData.load_table ('test/data.xml')
+    assert nrowsXLS == td.nrows()
+    td=TableData.load_table ('test/data.json')
+    assert nrowsXLS == td.nrows()
     

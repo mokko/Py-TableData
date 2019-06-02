@@ -268,15 +268,23 @@ class TableData:
                 results.append(rid)
 
 
-    def show (self):
+    def show (self, cname=None):
         '''
-        print representation of table
+        show table or column
+            self.show()      # print representation of table
+            self.show(cname) # print column
         
         Really print? Why not.
         '''
+        if cname is not None:
+            cid=self.cindex(cname)
+        
         for row in self.table:
+            if cname is None: 
                 print (row)
-                
+            else:
+                print ('|'+str(row[cid])+'|')
+                    
         print ('Table size is %i x %i (cols x rows)' % (self.ncols(), self.nrows()))            
 
 ##
@@ -321,8 +329,8 @@ class TableData:
 
     def clean_whitespace (self,cname):
         cid=self.cindex(cname)
-        for rid in range(1, td.nrows()):
-            td.table[rid][cid]=td.table[rid][cid].replace('\r\n', ' ').replace('  ', ' ')
+        for rid in range(1, self.nrows()):
+            self.table[rid][cid]=self.table[rid][cid].replace('\r\n', ' ').replace('  ', ' ')
 
 ##
 ##  MORE COMPLEX MANIPULATION

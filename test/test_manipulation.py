@@ -29,3 +29,13 @@ def test_addCol():
     td=TableData.load_table ('test/data.xls')
     cid=td.addCol('bla')
     assert cid == td.cindex('bla')
+    
+def test_whitespace():
+    td=TableData.load_table ('test/data.xls')
+    
+    td.table[1][0]='something\r\nCarriage Return'
+    assert '\r\n' in td.table[1][0] 
+    td.clean_whitespace('ColA')
+    assert not '\r\n' in td.table[1][0] 
+
+
