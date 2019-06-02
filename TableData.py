@@ -193,29 +193,27 @@ class TableData:
 ## read table data, but NO manipulations
 ##
     def ncols(self):
-        '''
-        Returns integer with number of columns in table data
+        ''' Returns integer with number of columns in table data
+            ncols=self.ncols()
         '''
         return len(self.table[0])
     
     def nrows (self):
-        '''
-        Returns integer with number of rows in table data
+        '''  Returns integer with number of rows in table data 
+            nrows=self.nrows()
         '''
         return len(self.table)
     
     def cell (self, col,row):
         '''
-        Return a cell for col,row.
-            td.cell(col,row)
+        For a given columnn and row, return the corresponding cell:
+            cell=td.cell(col,row)
 
         Throws exception if col or row are not integer or out of range.
-        What happens on empty cell?
+        What happens on empty cell? Returns '' not none.
         
-        I stick to x|y format, although row|col might be more pythonic.
+        I stick to x|y format, although row|col might be more pythonic.'''
         
-        Empty cell is '' not None.
-        '''
         try:
             return self.table[row][col]
         except:
@@ -223,11 +221,10 @@ class TableData:
             exit (1)
 
     def cindex (self,needle):
-        '''
-        Returns the column index (c) for column name 'needle'.
+        ''' Returns the cid (c) for the column name 'needle'.
         
-        Throws 'not in list' if 'needle' is not a column name (cname).
-        '''
+        Throws 'not in list' if 'needle' is not a column name (cname). '''
+        
         return self.table[0].index(needle)
 
     def colExists (self, cname):
@@ -239,13 +236,9 @@ class TableData:
 
 
     def search (self, needle): 
-        '''
-        Returns list of cells [cid,rid] that contain the needle.
-            r=td.search(needle) # (1,1)
-        
-        
-        tuples, lists? I am not quite sure!    
-        '''
+        ''' Returns list of tuples (cid,rid) that contain the needle.
+        r=td.search(needle) '''
+
         results=[]
         for rid in range(0, self.nrows()): 
             for cid in range(0, self.ncols()):
@@ -260,13 +253,15 @@ class TableData:
         '''
         Returns list/set of rows that contain the needle for the given col.
             td.search(cname, needle)
+        
+        UNTESTED
         '''
         results=()
         c=cindex(cname)
         for rid in range(0, self.nrows()): 
             if needle in self.cell(c,rid):
                 results.append(rid)
-
+        return results        
 
     def show (self, cname=None):
         '''
@@ -274,7 +269,7 @@ class TableData:
             self.show()      # print representation of table
             self.show(cname) # print column
         
-        Really print? Why not.
+        Really print? Why not. It's meant for quick debugging.
         '''
         if cname is not None:
             cid=self.cindex(cname)
@@ -292,21 +287,13 @@ class TableData:
 ## 
 
     def delRow (self, r):
-        '''
-        Drop a row by number.
-        
-        Need to remake the index to cover the hole.
-        ''' 
+        ''' Drop a row by number.''' 
         #r always means rid
         self.table.pop(r)
         #print ('row %i deleted' % r)
 
     def delCol (self, cname):  
-        '''
-        Drop a column by cname
-        
-        (Not tested.)
-        '''
+        ''' Drop a column by cname '''
         
         c=self.cindex (cname)    
         for r in range(0, self.nrows()):
@@ -314,12 +301,12 @@ class TableData:
 
 
     def addCol (self,name):
-        '''
-        Add a new column called name at the end of the row. 
-        Cells with be empty.
+        ''' Add a new column called at the end of the row with given name. 
 
-        Returns the cid of the new column, same as cindex(cname).
-        '''
+        cid=self.addCol('newName')
+
+        Respective cells with be empty. Returns the cid of the new column, 
+        same as cindex(cname). '''
         #update 
         self.table[0].append(name) 
         self._uniqueColumns()
