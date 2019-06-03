@@ -15,6 +15,7 @@ CONVENTIONS
 *cname is the column name (in row 0)
 
 NOTE
+* Column names have to be unique
 * (x|y) not rows x cols 
 * Currently internal cells do have a type, which may be flattened to str if output is type agnostic.
 * cid and rid begins with 0, so first cell is 0|0, but ncols and nrows start at 1. Strangely enough, sometimes that is convenient.
@@ -264,13 +265,12 @@ class TableData:
         return results        
 
     def show (self, cname=None):
-        '''
-        show table or column
+        ''' show table or column
             self.show()      # print representation of table
             self.show(cname) # print column
         
-        Really print? Why not. It's meant for quick debugging.
-        '''
+        Really print? Why not. It's meant for quick debugging.'''
+
         if cname is not None:
             cid=self.cindex(cname)
         
@@ -305,30 +305,41 @@ class TableData:
 
         cid=self.addCol('newName')
 
-        Respective cells with be empty. Returns the cid of the new column, 
+        Respective cells will be empty. Returns the cid of the new column, 
         same as cindex(cname). '''
         #update 
         self.table[0].append(name) 
         self._uniqueColumns()
         for rid in range(1, self.nrows()):
-            self.table[rid].append('') # append empty cells for all rows
+            Wself.table[rid].append('') # append empty cells for all rows
         return len(self.table[0])-1 # len starts counting at 1, but I want 0
 
     def clean_whitespace (self,cname):
+        '''Remove certain whitespace (windows style new lines and double spaces)'''
         cid=self.cindex(cname)
         for rid in range(1, self.nrows()):
             self.table[rid][cid]=self.table[rid][cid].replace('\r\n', ' ').replace('  ', ' ')
 
+
+    def set_col (self, cname, value):
+        '''Write value in column with cname. Every row will have same content. Existing content 
+        will be overwritten'''
+        cid=self.cindex(cname)
+        for rid in range(1, self.nrows()):
+            self.table[rid][cid]=value
+       
 ##
 ##  MORE COMPLEX MANIPULATION
 ##
-
-
-    def delCellAIfColBEq (self,cnameA, cnameB, needle):
-        '''
-        empty cell in column cnameA if value in column cnameB equals needle in every row
+    def setCellAifColBContains (self,cnameA, cnameB, needle, cell): 
+        ''' Write cell in colA if col B contains the needle.
+            self.delCellAIfColBContains (A,B, 'bla') '''
         
-        untested
+
+    def delCellAIfColBContains (self,cnameA, cnameB, needle):
+        ''' In each row, empty cell in column A if column B contains the needle.
+            self.delCellAIfColBContains (A,B, 'bla')
+        UNTESTED
         '''
         colA=self.cindex(cnameA)
         colB=self.cindex(cnameB) 
@@ -337,11 +348,11 @@ class TableData:
                 self.verbose ('delCellAifColBEq A:%s, B:%s, needle %s' % (cnameA, cnameB, needle))
                 selt.table[rid][colA]=''
 
-    def delCellAIfColBContains (self,col_a, col_b, needle): pass
+    #def delCellAIfColBEQ (self,cnameA, cnameB, needle): pass
 
     def delRowIfColContains (self, cname, needle): 
         '''
-        Delete row if column equals the value 'needle'
+        Delete row (not just cell) if column equals the value 'needle'
 
         Should we use cname or c (colId)?
         '''
@@ -363,11 +374,12 @@ class TableData:
            
     def delRowIfColEq (self,col, needle): pass
     def renameCol (self, cnameOld, cnameNew):
-        '''
-        renames column cnameOld into cnameNew
-        '''
-        c=self.cindex(cnameOld)
-        self.table[0][c]=cnameNew    
+        ''' Renames column cnameOld into cnameNew
+            cid=self.renameCol (old, new)
+        Returns column index of the column.'''
+        cid=self.cindex(cnameOld)
+        self.table[0][cid]=cnameNew
+        return cid    
 
     def default_per_col (cname, default_value):
         '''
@@ -390,9 +402,8 @@ class TableData:
     
 
     def write (self, out):
-        '''
-        write to file with extension-awareness
-        '''
+        ''' Write table to file, format is picked according to extension
+            self.write(outfile) #writes csv, xml or json '''
         ext=os.path.splitext(out)[1][1:].lower()
         if (ext == 'xml'):
             self.writeXML (out)
@@ -405,10 +416,10 @@ class TableData:
 
 
     def writeCSV (self,outfile):
-        '''
-        writes data in tableData object to outfile in csv format
+        ''' Writes table to file in csv format:
+            self.writeCSV (outfile)
         
-        Values with commas are quoted. 
+        Values with commas are quoted. Output is UTF-8 
         '''
         import csv
         self._outTest(outfile)
@@ -424,7 +435,8 @@ class TableData:
     
     def writeXML (self,out):
         '''
-        writes table data to file out in xml format
+        Writes table to file in xml format
+            self.writeXML(outfile)
         '''
         import xml.etree.ElementTree as ET
         from xml.sax.saxutils import escape
@@ -465,11 +477,9 @@ class TableData:
 
 
     def writeJSON (self, out):
-        '''
-        Writes table data in json to file out
-        
-        JSON doesn't have date type, hence default=str
-        '''    
+        ''' Writes table to json file. 
+            self.writeJSON(outfile)
+        JSON doesn't have date type, hence default=str'''    
         import json
         self._outTest(out)
 
