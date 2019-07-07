@@ -6,3 +6,4 @@ __pycache__/*
 data/HUFO-*
 data/WAF*
 test/__pycache*
+__pycache*

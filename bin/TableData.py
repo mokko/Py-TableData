@@ -56,9 +56,7 @@ class TableData:
     
     
     def _uniqueColumns (self):
-        '''
-        raise exception if column names (cnames) are not unique
-        '''
+        ''' Raise exception if column names (cnames) are not unique. '''
         if len(set(self.table[0])) != len(self.table[0]):
             raise Exception('Column names not unique')
 
@@ -82,13 +80,11 @@ class TableData:
 #
     
     def load_table (path, verbose=None):
-        '''
-        File extension aware ingester
+        ''' File extension aware ingester
 
             td=TableData.load_table(path)
         
-        This is an alternative to _init_. Is this pythonic enough? 
-        '''    
+        This is an alternative constructor to _init_.'''    
         ext=os.path.splitext(path)[1][1:]
     
         return TableData (ext, path,verbose)
@@ -206,8 +202,7 @@ class TableData:
         return len(self.table)
     
     def cell (self, col,row):
-        '''
-        For a given columnn and row, return the corresponding cell:
+        ''' For a given columnn and row, return the corresponding cell:
             cell=td.cell(col,row)
 
         Throws exception if col or row are not integer or out of range.
@@ -222,13 +217,14 @@ class TableData:
             exit (1)
 
     def cindex (self,needle):
-        ''' Returns the cid (c) for the column name 'needle'.
+        ''' Returns the cid for the column name 'needle'.
         
         Throws 'not in list' if 'needle' is not a column name (cname). '''
         
         return self.table[0].index(needle)
 
     def colExists (self, cname):
+        '''Returns True if cname is the name of an existing column name, False if it doesn't.'''
         try:
             self.table[0].index(cname)
             return True
@@ -251,8 +247,7 @@ class TableData:
         return results
 
     def search_col (self, cname, needle): 
-        '''
-        Returns list/set of rows that contain the needle for the given col.
+        ''' Returns list/set of rows that contain the needle for the given col.
             td.search(cname, needle)
         
         UNTESTED
@@ -286,11 +281,10 @@ class TableData:
 ## SIMPLE UNCONDITIONAL TRANSFORMATIONS 
 ## 
 
-    def delRow (self, r):
-        ''' Drop a row by number.''' 
-        #r always means rid
-        self.table.pop(r)
-        #print ('row %i deleted' % r)
+    def delRow (self, rid):
+        ''' Drop a row by number. (Rid is zero-based)''' 
+        self.table.pop(rid)
+        #print ('row %i deleted' % rid)
 
     def delCol (self, cname):  
         ''' Drop a column by cname '''
@@ -331,7 +325,15 @@ class TableData:
 ##
 ##  MORE COMPLEX MANIPULATION
 ##
-    def setCellAifColBContains (self,cnameA, cnameB, needle, cell): 
+
+    def _sortOrder (r): pass
+
+    def sortByCol (self, cname):
+         cid=self.cindex(cname)
+         #self.table.sort(key=_sortOrder)
+         self.table.sort(reverse=True)
+    
+    def setCellAIfColBContains (self,cnameA, cnameB, needle, cell): 
         ''' Write cell in colA if col B contains the needle.
             self.delCellAIfColBContains (A,B, 'bla') '''
         
@@ -345,7 +347,7 @@ class TableData:
         colB=self.cindex(cnameB) 
         for rid in range(1, self.nrows()):
             if self.table[rid][colB] == needle:
-                self.verbose ('delCellAifColBEq A:%s, B:%s, needle %s' % (cnameA, cnameB, needle))
+                self.verbose ('del %s if Col %s contains needle %s' % (cnameA, cnameB, needle))
                 selt.table[rid][colA]=''
 
     #def delCellAIfColBEQ (self,cnameA, cnameB, needle): pass
@@ -489,5 +491,8 @@ class TableData:
         self.verbose ('json written to %s' % out)
         
         
-if __name__ == '__main__': pass
-
+if __name__ == '__main__': 
+    td=TableData.load_table('test/data.csv', 'v')
+    td.show()
+    td.sortByCol('ColB')
+    td.show()
