@@ -8,7 +8,7 @@
 
 Notwendige Felder:
 GD.AktuellerStandort
-GD.St�ndiger Standort
+GD.Ständiger Standort
 Alle Felder in Standortgeschichte
 DatumVon
 DatumBis
@@ -16,7 +16,7 @@ Standort
 StandortDetail
 Bearb.Datum
 Bearb.Mitarb
-Verkn�ofung zu Thesaurus
+Verknüofung zu Thesaurus
 ...
 
 '''
@@ -33,25 +33,24 @@ if __name__ == "__main__":
     if not os.path.isfile(args.input):
         error ('Input file not found')
 
-
     td=TableData('xls',args.input)
-    
+
+    #COLUMNS    
     objId_no=td.cindex('objID')
     GD_AktSto_no=td.cindex('GD.AktuellerStandort')
     GD_StSto_no=td.cindex('GD.StändigerStandort')
     Sto=td.cindex('Standort')
 
-    #all distinct objId exactly once
+    #all distinct objIds exactly once <-- group by distinct objIds
     objIds=set()
     for r in td.table:
         objIds.add (r[objId_no])
 
-    #find exactly the DS with a specific objId
     noEqualInSTOHistory=set() #should be a list    
     for objId in objIds:
         hits=0
         for r in td.table:
-            if r[objId_no] == objId:
+            if r[objId_no] == objId: #only for current objId
                 if GD_AktSto is Null: #only the first time
                     GD_AktSto=r[GD_AktSto_no]
                     GD_StSto=r[GD_StSto_no]
@@ -61,7 +60,7 @@ if __name__ == "__main__":
 
         if hits == 0:    
             noEqualInSTOHistory.add(objId)
-        
-        GD_AktSto=Null # not exactly sure if that works with 
+            
+        GD_AktSto=Null # not exactly sure if that works
 
     print (noEqualInSTOHistory)
