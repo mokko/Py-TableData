@@ -1,6 +1,9 @@
-# This Python file uses the following encoding: utf-8
+﻿# This Python file uses the following encoding: utf-8
 '''
 Expect .xls file with mume links, check if files exists and report on missing files in EXCEL
+
+Use w/ "EM-HUF Multimedia (XSL)"
+
 '''
 
 import datetime
@@ -19,11 +22,11 @@ if __name__ == "__main__":
         error ('Input file not found')
         
     td=TableData('xls',args.input)
-    c1=td.cindex('multimediaPfadangabe') #  MMPfadangabe
-    c2=td.cindex('multimediaDateiname') # MMDateiname
-    c3=td.cindex('multimediaErweiterung') # MMErweiterung
-    mulId=td.cindex('mulId') # MMMulId
-    objId=td.cindex('objId') # ObjId
+    c1=td.cindex('MMPfadangabe')  #  multimediaPfadangabe
+    c2=td.cindex('MMDateiname')   # multimediaDateiname
+    c3=td.cindex('MMErweiterung') # multimediaErweiterung
+    mulId=td.cindex('MMMulId')    # mulId
+    objId=td.cindex('ObjId')      # objId
     
     notFound=0
     incomplete=0
