@@ -7,7 +7,7 @@ from TableData import TableData
 
 '''
 Copy multimedia resources to new directory. Resources are renamed according to objID.
-    cpMume.py --input mume.xsl # copies to current directory
+    cpMume.py --input mume.xsl # copies to directory of input file
     
     Expects the following excel columns: MMMulId, Standardbild, MMPfadangabe, MMDateiname, MMErweiterung
     
@@ -36,16 +36,16 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output', required=False)
 
     args = parser.parse_args()
-    outpath ='.'
+    if not os.path.isfile(args.input):
+        error ('Input file not found')
+
+    outpath = os.path.dirname(args.input)
+    #print ("outdir:"+outpath)
     if args.output:
         outpath=args.output
     
     if not os.path.isdir (outpath):
         print ("Error: Output dir not found")
-        exit (1)
-    
-    if not os.path.isfile(args.input):
-        error ('Input file not found')
 #
 #
 #
