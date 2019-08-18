@@ -492,7 +492,13 @@ class TableData:
         
         
 if __name__ == '__main__': 
-    td=TableData.load_table('test/data.csv', 'v')
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--input', required=True)
+    parser.add_argument('-o', '--output', required=False)
+    args = parser.parse_args()
+        
+    td=TableData.load_table(args.input, 'v')
     td.show()
-    td.sortByCol('ColB')
-    td.show()
+    td.write(args.output)
+ 
