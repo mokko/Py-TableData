@@ -62,7 +62,10 @@ class TableData:
 
     def __init__ (self, ingester, infile, verbose=None):
         self._verbose=verbose
-        if ingester == 'xml':
+        self.table=[] # will hold sheet in memory as list of list
+        if ingester == 'mpx':
+            self.MPXParser(infile)
+        elif ingester == 'xml':
             self.XMLParser(infile)
         elif ingester == 'xls':
             self.XLRDParser(infile)
@@ -111,7 +114,6 @@ class TableData:
         import xlrd
         import xlrd.sheet
         from xlrd.sheet import ctype_text
-        self.table=[] # will hold sheet in memory as list of list
         self.verbose ('xlrd infile %s' % infile)
 
 
@@ -147,15 +149,14 @@ class TableData:
 
     def CSVParser (self,infile): 
         import csv
-        self.table=[] # will hold sheet in memory as list of list
         self.verbose ('csvParser: ' + str(infile))
         with open(infile, mode='r', newline='') as csvfile:
             incsv = csv.reader(csvfile, dialect='excel')
             for row in incsv:
                 self.table.append(row)
                 #self.verbose (str(row))
-        
-   
+
+    
     def XMLParser (self,infile):
         #It is practically impossible to reconstruct the full list of columns from xml file
         #if xmlWriter leaves out empty elements. Instead, I write them at least for first row.
@@ -179,8 +180,128 @@ class TableData:
             self.table.append(col)
         #self.verbose (self.table)
 
+
+
+    '''
+    Parses mpx into two-dimensional list where 
+    a) only one record type (sammlungsobject) 
+    b) every record (distinct id) has one row
+    c) group elements become multiple entries in a single cell 
+    d) parameters are flattened in the usual way (elem/@param becomes elemParam)
+    '''
+    def MPXParser (self,infile):
+        self.verbose ('xml infile %s' % infile)
+        import xml.etree.ElementTree as ET
+        tree = ET.parse(infile)
+        tags=set() # distinct list for columns
+        data=[] # list of dictionaries to temporarily store the data
+        
+        #What happens with repeated attributes (Wiederholfelder) in this format? 
+        #Most get deleted/overwritten! Only the last one survives 
+        
+        #turn records into rows, and aspects into into columns
+        #we also turn aspect@attributes to aspectAttributes columns
+        for elem in tree.iter('{http://www.mpx.org/mpx}sammlungsobjekt'):
+            #print (elem.tag, elem.attrib)
+            record={}# single record
+            for each in 'objId', 'exportdatum':
+                record[each]=elem.attrib[each]
+                tags.add(each)
+            
+            for aspect in elem.findall('*'):
+                aspectNoNS=aspect.tag.split("}")[1]   
+                #print ('DICT'+aspectNoNS+':'+str(aspect.text))
+                tags.add(aspectNoNS)
+                if aspectNoNS in record:
+                    record[aspectNoNS]=self._appender (record[aspectNoNS],aspect.text)
+                else:
+                    record[aspectNoNS]=aspect.text
+
+                for param in aspect.attrib:
+                    paramNotation=aspectNoNS+param[0].upper()+param[1:]
+                    #print ('!DICT'+paramNotation+':'+str(aspect.attrib.get(param)))
+                    tags.add(paramNotation)
+                    if paramNotation in record:
+                        record[paramNotation]=self._appender(record[paramNotation], aspect.attrib.get(param))
+                    else:
+                        record[paramNotation]=aspect.attrib.get(param)
+                    '''            
+                    Problem: When we rewrite group elements (Wiederholfelder) that have uneven number of attributes, we lose information 
+                    since it is no longer clear to which entry the attributes refer. 
+                    
+                    Group elements are rewritten as single elements with multiple entries by listing them with a separator, e.g.
+                        <geoBezug>Indien</geoBezug> 
+                        <geoBezug>Assam</geoBezug>
+                    becomes
+                        <geoBezug>Indien; Assam<geoBezug>
+                    (Of course the separator implies some masking issues which we don't need to deal with at the moment.)
+                    
+                    There is a problem with uneven number of attributes (in our source format empty parameters are left out):
+                        <geoBezug bezeichnung="Land">Indien</geoBezug> 
+                        <geoBezug>Assam</geoBezug>
+                    becomes
+                        <geoBezug>Indien; Assam<geoBezug>
+                        <geoBezugBezeichnung>Land</geoBezugBezeichnung>
+        
+                    It is no longer clear what entry in geoBezug Land refers to. I want to fix that by marking empty entries:
+                        <geoBezug>Indien; Assam<geoBezug>
+                        <geoBezugBezeichnung>Land;</geoBezugBezeichnung>
+                    
+                    So first we need to determine the attribute group, e.g. the attributes that belong together. In this case the attribute 
+                    group belonging to the mother element geoBezug. It consists of geoBezugBezeichnung and geoBezugBemerkung. (We only have 
+                    to do that for group elements and only if they have attributes, not for every element.)
+                    
+                    For now let's say we check for attribute group every time we write an attribute. We could check the tags set since it has 
+                    already been updated. Alternatively, we could also examine the xml doc using xpath etc. But it's not enough to check only 
+                    the attributes of same element. We also have to check all the attributes of the sister elements of the attribute group:
+                    e.g. all sibling geoBezug elements. 
+                    
+                    So perhaps it's easier to check the set of flattened attributes. We know the geoBezug is the mother element, so we just
+                    go thru every tag known so far and check if it begins with substring geoBezug. The list that results describes the
+                    group attributes (with or without the mother element). Now we compare the number of entries for both and add empty attributes 
+                    until they have the same number. The next time we write an attribute we do the same check, so we don't need to know what's
+                    in the future.  
+                    '''
+                    groupAttributes=[tag for tag in tags if aspectNoNS in tag]
+                    print ("||"+aspectNoNS+'/'+str(groupAttributes))
+                    soll=0
+                    #analyze status quo
+                    for each in groupAttributes:
+                        if each in record:
+                            count=1+record[each].count(';') # count occurences 1-based
+                            if count > soll:
+                                soll=count
+                        else:
+                            record[each]=''
+                    #add necessary semicolons        
+                    for each in groupAttributes:
+                        count=1+record[each].count(';') # count occurences 1-based
+                        if count < soll:
+                            record[each]=record[each]+(';'*(soll-count))
+                        print ("  %s:%s (S/I:%s/%s)" % (each,record[each], soll, count ))
+
+            #print (record)
+            data.append(record) 
+        #print (sorted(tags))
+
+        self.table.append(sorted(tags)) #add columns
+
+        for record in data:
+            col=[]
+            for tag in self.table[0]:
+                if tag in record:
+                    col.append(record[tag])
+                    #print (tag+':'+str(record[tag]))
+                else:
+                    col.append('')
+            self.table.append(col)
+        #self.verbose (self.table)
+
+
+    def _appender (self, strA, strB):
+        return strA.rstrip()+'; '+strB.rstrip()
+
     def JSONParser (self, infile):
-        self.table=[] # will hold sheet in memory as list of list; overwrite
         import json
         self.verbose ('json infile %s' % infile)
         json_data = open(infile, 'r').read()
@@ -495,10 +616,14 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', required=True)
-    parser.add_argument('-o', '--output', required=False)
+    #parser.add_argument('-o', '--output', required=False)
     args = parser.parse_args()
         
     td=TableData.load_table(args.input, 'v')
-    td.show()
-    td.write(args.output)
+    #td.show()
+    pre, ext = os.path.splitext(args.input)
+
+    #td.write(pre + '.xml')
+    td.write(pre + '.csv')
+    #td.write(args.output)
  
