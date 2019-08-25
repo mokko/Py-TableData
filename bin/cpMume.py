@@ -37,7 +37,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     if not os.path.isfile(args.input):
-        error ('Input file not found')
+        print  ('Input file not found')
+        sys.exit (1)
 
     outpath = os.path.dirname(args.input)
     #print ("outdir:"+outpath)
