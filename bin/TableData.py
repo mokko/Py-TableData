@@ -264,18 +264,18 @@ class TableData:
                     '''
                     groupAttributes=[tag for tag in tags if aspectNoNS in tag]
                     print ("||"+aspectNoNS+'/'+str(groupAttributes))
-                    soll=0
+                    soll=0 # no of semicolons (i.e. entries-1)
                     #analyze status quo
                     for each in groupAttributes:
                         if each in record:
-                            count=1+record[each].count(';') # count occurences 1-based
+                            count=record[each].count(';') # count semicolons
                             if count > soll:
                                 soll=count
                         else:
-                            record[each]=''
+                            record[each]='' #make null params in group explicit
                     #add necessary semicolons        
                     for each in groupAttributes:
-                        count=1+record[each].count(';') # count occurences 1-based
+                        count=record[each].count(';') # count semicolons
                         if count < soll:
                             record[each]=record[each]+(';'*(soll-count))
                         print ("  %s:%s (S/I:%s/%s)" % (each,record[each], soll, count ))
