@@ -426,7 +426,7 @@ class TableData:
         self.table[0].append(name) 
         self._uniqueColumns()
         for rid in range(1, self.nrows()):
-            Wself.table[rid].append('') # append empty cells for all rows
+            self.table[rid].append('') # append empty cells for all rows
         return len(self.table[0])-1 # len starts counting at 1, but I want 0
 
     def clean_whitespace (self,cname):
